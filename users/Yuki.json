@@ -1,0 +1,12 @@
+{
+	"Name": "Yuki",
+	"Age": 29,
+	"Contact": "7654321",
+	"Company": "Sony",
+	"Address": {
+		"City": "tokyo",
+		"State": "kanto",
+		"Country": "japan",
+		"Pincode": 100001
+	}
+}

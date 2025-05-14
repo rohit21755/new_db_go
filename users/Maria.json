@@ -1,0 +1,12 @@
+{
+	"Name": "Maria",
+	"Age": 26,
+	"Contact": "3456789",
+	"Company": "Apple",
+	"Address": {
+		"City": "cupertino",
+		"State": "california",
+		"Country": "usa",
+		"Pincode": 95014
+	}
+}

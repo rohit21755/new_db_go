@@ -1,0 +1,12 @@
+{
+	"Name": "John",
+	"Age": 23,
+	"Contact": "2345423",
+	"Company": "Google",
+	"Address": {
+		"City": "banglore",
+		"State": "karnataka",
+		"Country": "india",
+		"Pincode": 302028
+	}
+}

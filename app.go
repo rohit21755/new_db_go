@@ -50,7 +50,7 @@ type Address struct {
 }
 
 func stat(path string) (fi os.FileInfo, err error) {
-	if fi, err := os.Stat(path); os.IsNotExist(err) {
+	if fi, err = os.Stat(path); os.IsNotExist(err) {
 		fi, err = os.Stat(path + ".json")
 	}
 	return
@@ -85,33 +85,35 @@ func New(dir string, options *Options) (*Driver, error) {
 
 func (d *Driver) Write(collection, resource string, v interface{}) error {
 	if collection == "" {
-		fmt.Errorf("Missing collection")
+		return fmt.Errorf("Missing collection")
 	}
 	if resource == "" {
-		return fmt.Errorf("Missing resouce")
+		return fmt.Errorf("Missing resource")
 	}
 
 	mutex := d.getOrCreateMutex(collection)
 	mutex.Lock()
 	defer mutex.Unlock()
+
 	dir := filepath.Join(d.dir, collection)
-	fnlPath := filepath.Join(dir, resource)
+	fnlPath := filepath.Join(dir, resource+".json")
 	tmp := fnlPath + ".tmp"
 
-	if err := os.Mkdir(dir, 0755); err != nil {
+	// Create collection directory if it doesn't exist
+	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
 
 	b, err := json.MarshalIndent(v, "", "\t")
 	if err != nil {
-		fmt.Errorf("Error :", err)
+		return fmt.Errorf("Error marshalling: %v", err)
 	}
 
 	b = append(b, byte('\n'))
 	if err := os.WriteFile(tmp, b, 0644); err != nil {
 		return err
 	}
-
+	return os.Rename(tmp, fnlPath)
 }
 
 func (d *Driver) Read(collection, resource string, v interface{}) error {
@@ -127,15 +129,55 @@ func (d *Driver) Read(collection, resource string, v interface{}) error {
 	if _, err := stat(record); err != nil {
 		return err
 	}
-	os.ReadFile(record + ".json")
+	b, err := os.ReadFile(record + ".json")
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, &v)
+}
+func (d *Driver) ReadAll(collection string) ([]string, error) {
+	if collection == "" {
+		return nil, fmt.Errorf("Missing collection")
+	}
+	dir := filepath.Join(d.dir, collection)
+	if _, err := stat(dir); err != nil {
+		return nil, fmt.Errorf("Error: ", err)
+	}
+
+	files, _ := os.ReadDir(dir)
+	var records []string
+
+	for _, file := range files {
+		b, err := os.ReadFile(filepath.Join(dir, file.Name()))
+		if err != nil {
+			return nil, err
+		}
+
+		records = append(records, string(b))
+	}
+	return records, nil
 
 }
-func (d *Driver) ReadAll() error {
 
-}
+func (d *Driver) Delete(collection, resource string) error {
+	path := filepath.Join(collection, resource)
+	mutex := d.getOrCreateMutex(collection)
+	mutex.Lock()
+	defer mutex.Unlock()
 
-func (d *Driver) Delete() error {
+	dir := filepath.Join(d.dir, path)
 
+	switch fi, err := stat(dir); {
+	case fi == nil, err != nil:
+		return fmt.Errorf("error", err)
+	case fi.Mode().IsDir():
+		return os.RemoveAll(dir)
+	case fi.Mode().IsRegular():
+		{
+			return os.RemoveAll(dir + ".json")
+		}
+	}
+	return nil
 }
 
 func (d *Driver) getOrCreateMutex(collection string) *sync.Mutex {

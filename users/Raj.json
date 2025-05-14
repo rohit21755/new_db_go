@@ -1,0 +1,12 @@
+{
+	"Name": "Raj",
+	"Age": 31,
+	"Contact": "8765432",
+	"Company": "Amazon",
+	"Address": {
+		"City": "mumbai",
+		"State": "maharashtra",
+		"Country": "india",
+		"Pincode": 400001
+	}
+}

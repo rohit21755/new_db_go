@@ -1,0 +1,12 @@
+{
+	"Name": "Sarah",
+	"Age": 28,
+	"Contact": "9876543",
+	"Company": "Microsoft",
+	"Address": {
+		"City": "seattle",
+		"State": "washington",
+		"Country": "usa",
+		"Pincode": 98052
+	}
+}
