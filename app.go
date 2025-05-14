@@ -49,6 +49,13 @@ type Address struct {
 	Pincode json.Number
 }
 
+func stat(path string) (fi os.FileInfo, err error) {
+	if fi, err := os.Stat(path); os.IsNotExist(err) {
+		fi, err = os.Stat(path + ".json")
+	}
+	return
+}
+
 func New(dir string, options *Options) (*Driver, error) {
 	dir = filepath.Clean(dir)
 	opts := Options{}
@@ -76,11 +83,51 @@ func New(dir string, options *Options) (*Driver, error) {
 
 }
 
-func (d *Driver) Write() error {
+func (d *Driver) Write(collection, resource string, v interface{}) error {
+	if collection == "" {
+		fmt.Errorf("Missing collection")
+	}
+	if resource == "" {
+		return fmt.Errorf("Missing resouce")
+	}
+
+	mutex := d.getOrCreateMutex(collection)
+	mutex.Lock()
+	defer mutex.Unlock()
+	dir := filepath.Join(d.dir, collection)
+	fnlPath := filepath.Join(dir, resource)
+	tmp := fnlPath + ".tmp"
+
+	if err := os.Mkdir(dir, 0755); err != nil {
+		return err
+	}
+
+	b, err := json.MarshalIndent(v, "", "\t")
+	if err != nil {
+		fmt.Errorf("Error :", err)
+	}
+
+	b = append(b, byte('\n'))
+	if err := os.WriteFile(tmp, b, 0644); err != nil {
+		return err
+	}
 
 }
 
-func (d *Driver) Read() error {
+func (d *Driver) Read(collection, resource string, v interface{}) error {
+	if collection == "" {
+		fmt.Errorf("Missing collection")
+	}
+	if resource == "" {
+		return fmt.Errorf("Missing resouce")
+	}
+
+	record := filepath.Join(d.dir, collection, resource)
+
+	if _, err := stat(record); err != nil {
+		return err
+	}
+	os.ReadFile(record + ".json")
 
 }
 func (d *Driver) ReadAll() error {
@@ -91,8 +138,13 @@ func (d *Driver) Delete() error {
 
 }
 
-func getOrCreateMutex() *sync.Mutex {
-
+func (d *Driver) getOrCreateMutex(collection string) *sync.Mutex {
+	m, ok := d.mutexes[collection]
+	if !ok {
+		m = &sync.Mutex{}
+		d.mutexes[collection] = m
+	}
+	return m
 }
 
 func main() {
